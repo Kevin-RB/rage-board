@@ -1,0 +1,5 @@
+# Drop folder for meme images, sounds and videos. Not committed until the asset handling decision is made.
+assets-inbox/
+node_modules/
+dist/
+.astro/
