@@ -470,6 +470,15 @@ dialog::backdrop { background: oklch(0.15 0.02 60 / 0.55); }
 .editor[open] { display: flex; flex-direction: column; gap: 1.25rem; }
 .editor-close { position: absolute; z-index: 1; inset-block-start: 0.4rem; inset-inline-end: 0.4rem; }
 .editor-close .icon-button { color: var(--note-ink); }
+/* These sit on the note, not the page, so their states can't use the theme's colours. */
+.editor-close .icon-button:active, .editor-actions .quiet:active { background: oklch(0 0 none / 0.18); }
+@media (hover: hover) and (pointer: fine) {
+  .editor-close .icon-button:hover, .editor-actions .quiet:hover {
+    color: var(--note-ink);
+    background: oklch(0 0 none / 0.1);
+  }
+  .editor-actions .primary:hover { background: color-mix(in oklch, var(--note-ink), white 18%); }
+}
 .editor textarea {
   display: block;
   padding: 0.25rem 0.35rem;

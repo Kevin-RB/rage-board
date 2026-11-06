@@ -2,7 +2,7 @@
 import "@fontsource/comic-relief/latin-400.css";
 import "@fontsource/comic-relief/latin-700.css";
 import {
-  Angry, Briefcase, Check, Clock, Coffee, createElement, createIcons, Flame, Frown, Hourglass, Meh,
+  Angry, Briefcase, Check, Clock, Coffee, createElement, createIcons, Flame, Frown, Grip, Hourglass, Meh,
   Minus, Plus, Shuffle, Smile, StickyNote, Sunrise, Trash2, Volume2, VolumeX, X, type IconNode,
 } from "lucide";
 import { layOut, noteSize, type Task } from "./layout";
@@ -149,7 +149,9 @@ function render() {
   $<HTMLInputElement>("volume").value = String(state.volume);
   $<HTMLSelectElement>("lab-theme").value = theme;
   $<HTMLSelectElement>("lab-font").value = font;
-  $<HTMLSelectElement>("lab-surface").value = surface;
+  const surfaceLabel = surface === "cork" ? "Switch to dotted paper" : "Switch to corkboard";
+  $("surface").setAttribute("aria-label", surfaceLabel);
+  $("surface").title = surfaceLabel;
   const mute = $("mute");
   mute.setAttribute("aria-pressed", String(state.muted));
   mute.setAttribute("aria-label", state.muted ? "Unmute" : "Mute");
@@ -393,6 +395,11 @@ $<HTMLInputElement>("volume").addEventListener("input", (event) => {
   commit();
 });
 
+$("surface").addEventListener("click", () => {
+  state.surface = state.surface === "cork" ? "dots" : "cork";
+  commit();
+});
+
 const confirmDialog = $<HTMLDialogElement>("confirm");
 $("new-day").addEventListener("click", () => confirmDialog.showModal());
 confirmDialog.addEventListener("close", () => {
@@ -433,10 +440,6 @@ $<HTMLSelectElement>("lab-font").addEventListener("change", (e) => {
   state.font = (e.target as HTMLSelectElement).value as State["font"];
   commit();
 });
-$<HTMLSelectElement>("lab-surface").addEventListener("change", (e) => {
-  state.surface = (e.target as HTMLSelectElement).value as State["surface"];
-  commit();
-});
 $("lab-reset").addEventListener("click", () => {
   for (const task of state.tasks) {
     delete task.pin;
@@ -471,7 +474,7 @@ addEventListener("storage", (event) => {
 new ResizeObserver(render).observe(wall);
 
 createIcons({
-  icons: { Briefcase, Check, Clock, Coffee, Hourglass, Minus, Plus, Shuffle, StickyNote, Sunrise, Trash2, Volume2, VolumeX, X },
+  icons: { Briefcase, Check, Clock, Coffee, Grip, Hourglass, Minus, Plus, Shuffle, StickyNote, Sunrise, Trash2, Volume2, VolumeX, X },
   attrs: { "aria-hidden": "true" },
 });
 
