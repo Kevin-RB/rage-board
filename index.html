@@ -10,26 +10,17 @@
     <!-- Prototype-only controls. Nothing in this strip is part of the Board. -->
     <form id="lab" class="lab" aria-label="Prototype controls">
       <strong class="lab-tag">Prototype</strong>
-      <label>Crowding
-        <select id="lab-strategy">
-          <option value="pile">Overlapping pile</option>
-          <option value="hybrid">Columns, then overlap</option>
-          <option value="hours">Wall = Shift (sized by hours)</option>
-          <option value="columns">More columns only</option>
-          <option value="shrink">Shrinking text only</option>
-          <option value="scroll">Scrolling only</option>
-        </select>
-      </label>
       <label>Note font
         <select id="lab-font">
-          <option value="comic">Comic Sans</option>
+          <option value="relief">Comic Relief (bundled)</option>
+          <option value="comic">Comic Sans (if installed)</option>
           <option value="clean">Clean</option>
         </select>
       </label>
-      <label>Controls
-        <select id="lab-placement">
-          <option value="rail">Side rail</option>
-          <option value="band">Top band</option>
+      <label>Surface
+        <select id="lab-surface">
+          <option value="cork">Corkboard</option>
+          <option value="dots">Dotted paper</option>
         </select>
       </label>
       <label>Look
@@ -56,11 +47,10 @@
       </span>
       <span class="lab-group" role="group" aria-label="Awkward cases">
         <button type="button" data-case="many">100 Tasks</button>
-        <button type="button" data-case="tiny">50 × 15m</button>
+        <button type="button" data-case="long">Long titles</button>
         <button type="button" data-case="huge">One 12h Task</button>
         <button type="button" data-add="1">+1</button>
         <button type="button" data-add="5">+5</button>
-        <button type="button" data-add="20">+20</button>
       </span>
       <button type="button" id="lab-reset">Reset positions</button>
       <button type="button" id="lab-phone">Phone view</button>
@@ -69,82 +59,124 @@
 
     <div class="stage">
       <main id="board" class="board">
-        <section class="overload" aria-label="Overload">
-          <p class="today" id="today"></p>
-          <p class="overload-label">Overload</p>
-          <output class="overload-value" id="overload-value">0%</output>
-          <div class="meter" aria-hidden="true">
-            <div class="meter-fill" id="meter-fill"></div>
-            <i style="--at: 25%"></i><i style="--at: 50%"></i><i style="--at: 75%"></i>
-          </div>
-          <p class="overload-detail">
-            <span id="stage-name">Calm</span> · <span id="total-hours">0h</span> of
-            <label class="shift">
-              <span class="visually-hidden">Shift length in hours</span>
-              <input id="shift" type="number" min="1" max="24" step="0.5" inputmode="decimal" />h
-            </label>
-            Shift · <span id="task-count">0 Tasks</span>
-          </p>
-        </section>
+        <aside class="rail">
+          <section class="panel overload" aria-label="Overload">
+            <div class="overload-top">
+              <p class="today" id="today"></p>
+              <p class="stage-chip" id="stage-chip"><span id="stage-icon"></span><span id="stage-name">Calm</span></p>
+            </div>
+            <output class="overload-value" id="overload-value">0%</output>
+            <p class="overload-label">Overload</p>
+            <div class="meter" aria-hidden="true"><div class="meter-fill" id="meter-fill"></div></div>
+            <dl class="stats">
+              <div>
+                <dt><i data-lucide="hourglass"></i>Booked</dt>
+                <dd id="total-hours">0h</dd>
+              </div>
+              <div>
+                <dt><i data-lucide="sticky-note"></i>Tasks</dt>
+                <dd id="task-count">0</dd>
+              </div>
+              <div>
+                <dt><i data-lucide="briefcase"></i>Shift</dt>
+                <dd class="stepper">
+                  <button type="button" id="shift-down" aria-label="Shorter Shift"><i data-lucide="minus"></i></button>
+                  <output id="shift">8h</output>
+                  <button type="button" id="shift-up" aria-label="Longer Shift"><i data-lucide="plus"></i></button>
+                </dd>
+              </div>
+            </dl>
+          </section>
 
-        <form id="add" class="add" autocomplete="off">
-          <label class="add-title">
-            <span>What do they want?</span>
-            <input id="title" type="text" required placeholder="Task title" enterkeyhint="done" />
-          </label>
-          <fieldset class="estimates">
-            <legend>Estimate</legend>
-            <label><input type="radio" name="estimate" value="15" /><span>15m</span></label>
-            <label><input type="radio" name="estimate" value="30" /><span>30m</span></label>
-            <label><input type="radio" name="estimate" value="60" checked /><span>1h</span></label>
-            <label><input type="radio" name="estimate" value="120" /><span>2h</span></label>
-            <label><input type="radio" name="estimate" value="240" /><span>4h</span></label>
-            <label><input type="radio" name="estimate" value="custom" /><span>Custom</span></label>
-          </fieldset>
-          <label class="custom" id="custom-row" hidden>
-            <span>Hours</span>
-            <input id="custom" type="number" min="0.25" step="0.25" value="3" inputmode="decimal" />
-          </label>
-          <fieldset class="colors" id="colors">
-            <legend>Colour</legend>
-            <label class="color-random">
-              <input type="radio" name="color" value="random" checked /><span>Random</span>
+          <form id="add" class="panel add" autocomplete="off">
+            <label>
+              <span class="visually-hidden">Task title</span>
+              <input id="title" type="text" required placeholder="What do they want?" enterkeyhint="done" />
             </label>
-          </fieldset>
-          <button class="primary" type="submit">Yeah, sure</button>
-        </form>
+            <div class="add-options">
+              <label class="pill">
+                <i data-lucide="clock"></i>
+                <span class="visually-hidden">Estimate</span>
+                <select id="estimate">
+                  <option value="15">15m</option>
+                  <option value="30">30m</option>
+                  <option value="60" selected>1h</option>
+                  <option value="120">2h</option>
+                  <option value="240">4h</option>
+                  <option value="custom">Custom…</option>
+                </select>
+              </label>
+              <label class="pill" id="custom-row" hidden>
+                <span class="visually-hidden">Custom Estimate in hours</span>
+                <input id="custom" type="number" min="0.25" step="0.25" value="3" inputmode="decimal" />h
+              </label>
+              <button type="button" class="pill" id="color-button" popovertarget="color-menu">
+                <span id="color-current"></span>
+                <span id="color-label">Random</span>
+              </button>
+              <div id="color-menu" class="color-menu" popover>
+                <button type="button" class="color-random" data-pick="random"><i data-lucide="shuffle"></i>Random</button>
+                <div class="swatches" id="color-swatches"></div>
+              </div>
+            </div>
+            <button class="primary" type="submit"><i data-lucide="plus"></i>Yeah, sure</button>
+          </form>
 
-        <details class="utilities" id="utilities">
-          <summary>Sound and New day</summary>
-          <div class="utilities-body">
-            <button type="button" id="mute" aria-pressed="false">Sound on</button>
+          <footer class="utilities">
+            <button type="button" class="icon-button" id="mute" aria-pressed="false" aria-label="Mute">
+              <i data-lucide="volume-2" class="when-on"></i>
+              <i data-lucide="volume-x" class="when-off"></i>
+            </button>
             <label class="volume">
               <span class="visually-hidden">Volume</span>
               <input id="volume" type="range" min="0" max="100" />
             </label>
-            <button type="button" id="new-day">New day</button>
-          </div>
-        </details>
+            <button type="button" class="quiet" id="new-day"><i data-lucide="sunrise"></i>New day</button>
+          </footer>
+        </aside>
 
         <section class="wall" id="wall" aria-label="Tasks">
-          <p class="empty" id="empty">No requests yet.</p>
+          <p class="empty" id="empty"><i data-lucide="coffee"></i>Nothing yet. Enjoy it.</p>
         </section>
       </main>
     </div>
 
+    <!-- The note, up close: the full title, and everything you can change about it. -->
+    <dialog id="editor" class="editor" aria-label="Edit Task">
+      <form method="dialog" class="editor-close">
+        <button class="icon-button" aria-label="Close"><i data-lucide="x"></i></button>
+      </form>
+      <label>
+        <span class="visually-hidden">Task title</span>
+        <textarea id="editor-title" rows="1"></textarea>
+      </label>
+      <div class="editor-row">
+        <label class="pill">
+          <i data-lucide="clock"></i>
+          <span class="visually-hidden">Estimate in hours</span>
+          <input id="editor-hours" type="number" min="0.25" step="0.25" inputmode="decimal" />h
+        </label>
+        <div class="swatches" id="editor-swatches"></div>
+      </div>
+      <div class="editor-row editor-actions">
+        <button type="button" class="quiet" id="editor-remove"><i data-lucide="trash-2"></i>Remove</button>
+        <button type="button" class="primary" id="editor-done"><i data-lucide="check"></i>Done</button>
+      </div>
+    </dialog>
+
     <dialog id="confirm" class="confirm">
       <form method="dialog">
-        <h2>Start a new day?</h2>
+        <h2><i data-lucide="sunrise"></i>Start a new day?</h2>
         <p>This clears every Task on the Board.</p>
         <div class="confirm-actions">
-          <button value="cancel" autofocus>Keep them</button>
+          <button value="cancel" class="quiet" autofocus>Keep them</button>
           <button value="ok" class="primary">Start new day</button>
         </div>
       </form>
     </dialog>
 
     <dialog id="phone" class="phone">
-      <form method="dialog"><button>Close phone view</button></form>
+      <form method="dialog"><button class="quiet">Close phone view</button></form>
       <iframe id="phone-frame" title="Phone view of the Board" width="390" height="844"></iframe>
     </dialog>
   </body>
