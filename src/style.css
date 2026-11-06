@@ -1,0 +1,342 @@
+:root {
+  color-scheme: light;
+  --view-scale: 1;
+  --bg: oklch(0.955 0.004 250);
+  --panel: oklch(1 0 none);
+  --card: oklch(1 0 none);
+  --ink: oklch(0.2 0.015 260);
+  --muted: oklch(0.48 0.012 260);
+  --line: oklch(0.87 0.006 260);
+  --accent: oklch(0.47 0.13 258);
+  --on-accent: oklch(0.99 0 none);
+  font-family: Inter, "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: oklch(0.16 0.008 260);
+  --panel: oklch(0.2 0.01 260);
+  --card: oklch(0.27 0.012 260);
+  --ink: oklch(0.96 0.003 260);
+  --muted: oklch(0.72 0.01 260);
+  --line: oklch(0.36 0.012 260);
+  --accent: oklch(0.72 0.13 250);
+  --on-accent: oklch(0.15 0.01 260);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { block-size: 100%; }
+body { margin: 0; display: flex; flex-direction: column; overflow: clip; }
+h2, h3, p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: clip;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+button {
+  min-block-size: 2.75rem;
+  padding-inline: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+button:active { background: var(--line); }
+@media (hover: hover) and (pointer: fine) {
+  button:hover { border-color: var(--muted); }
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+button.primary:active { background: color-mix(in oklch, var(--accent), black 15%); }
+
+/* Prototype controls: visually separate on purpose */
+.lab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.3rem 0.75rem;
+  background: oklch(0.3 0.08 300);
+  color: oklch(0.97 0 none);
+  font-size: 0.8rem;
+}
+.lab.is-hidden { display: none; }
+.lab-tag { text-transform: uppercase; letter-spacing: 0.08em; }
+.lab label { display: inline-flex; gap: 0.3rem; align-items: center; }
+.lab select, .lab button {
+  min-block-size: 1.7rem;
+  padding: 0 0.45rem;
+  background: oklch(0.4 0.08 300);
+  color: inherit;
+  border: 1px solid oklch(0.55 0.08 300);
+  border-radius: 0.3rem;
+}
+.lab select option { background: oklch(0.3 0.08 300); }
+.lab-group { display: inline-flex; gap: 0.2rem; }
+
+/* The Board */
+.stage {
+  flex: 1;
+  min-block-size: 0;
+  display: grid;
+  background: oklch(0.08 0 none);
+}
+.board {
+  --edge: 1.5rem;
+  min-block-size: 0;
+  min-inline-size: 0;
+  display: grid;
+  gap: 1rem var(--edge);
+  padding: var(--edge);
+  background: var(--bg);
+  transform: scale(var(--view-scale));
+  grid-template-columns: clamp(20rem, 26vw, 30rem) minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "overload wall"
+    "add wall"
+    "utilities wall";
+}
+:root[data-placement="band"] .board {
+  grid-template-columns: minmax(19rem, 24rem) minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "overload add utilities"
+    "wall wall wall";
+}
+
+.overload { grid-area: overload; container-type: inline-size; }
+.add { grid-area: add; }
+.utilities { grid-area: utilities; align-self: end; }
+.wall { grid-area: wall; }
+
+.today { color: var(--muted); font-size: 1rem; margin-block-end: 0.75rem; }
+.overload-label { font-size: 1.25rem; font-weight: 600; }
+.overload-value {
+  display: block;
+  font-size: 31cqi;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.meter {
+  position: relative;
+  block-size: 1.1rem;
+  margin-block: 0.4rem 0.6rem;
+  background: var(--line);
+  border-radius: 0.25rem;
+  overflow: clip;
+}
+.meter-fill { block-size: 100%; background: var(--accent); }
+.meter i {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--at);
+  inline-size: 2px;
+  background: var(--bg);
+}
+.overload-detail { font-size: 1.05rem; color: var(--muted); line-height: 1.7; }
+#stage-name { font-weight: 700; color: var(--ink); }
+.shift { white-space: nowrap; }
+.shift input {
+  inline-size: 3.6em;
+  padding: 0.1rem 0.25rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.add { display: grid; gap: 0.6rem; align-content: start; }
+.add-title { display: grid; gap: 0.25rem; font-weight: 600; }
+.add input[type="text"], .custom input {
+  inline-size: 100%;
+  min-block-size: 3rem;
+  padding-inline: 0.75rem;
+  font-size: 1.1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+}
+.estimates {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.estimates legend { padding: 0; margin-block-end: 0.25rem; font-weight: 600; }
+.estimates input { position: absolute; opacity: 0; }
+.estimates span {
+  display: grid;
+  place-items: center;
+  min-block-size: 2.75rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.estimates input:checked + span {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+.estimates input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+.estimates label:active span { background: var(--line); }
+.custom { display: grid; grid-template-columns: auto 1fr; gap: 0.6rem; align-items: center; }
+.add .primary { min-block-size: 3.25rem; font-size: 1.2rem; }
+
+.utilities summary { display: none; }
+.utilities-body { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; }
+.volume { flex: 1 1 6rem; display: flex; }
+.volume input { inline-size: 100%; }
+#new-day { margin-inline-start: auto; }
+
+:root[data-placement="band"] .add {
+  grid-template-columns: minmax(12rem, 1fr) auto auto;
+  align-items: end;
+  align-self: end;
+}
+:root[data-placement="band"] .estimates { grid-template-columns: repeat(6, minmax(3.5rem, 1fr)); }
+:root[data-placement="band"] .custom { grid-column: 1 / -1; }
+:root[data-placement="band"] .utilities-body { flex-direction: column; align-items: stretch; }
+:root[data-placement="band"] #new-day { margin-inline-start: 0; }
+
+/* The wall of Tasks: every card is placed by src/layout.ts */
+.wall {
+  position: relative;
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow: clip;
+}
+.wall.scrolls { overflow: hidden auto; }
+.wall.slots {
+  background-image:
+    linear-gradient(to right, var(--line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: var(--slot-w) var(--slot-h);
+}
+.sizer { inline-size: 1px; }
+.empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 1.5rem;
+}
+
+.card {
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6em;
+  padding: 0.55em;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 0.35em;
+  overflow: clip;
+}
+.card.tall { flex-direction: column; justify-content: space-between; }
+.card.piled { z-index: 1; box-shadow: 0 0.15em 0.7em oklch(0 0 none / 0.3); }
+.card h3 {
+  flex: 1;
+  min-inline-size: 0;
+  font-size: 1em;
+  font-weight: 650;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--lines);
+  overflow: hidden;
+}
+.card-estimate {
+  flex: none;
+  font-size: 0.8em;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Fixed size, so they stay usable when the card's text is tiny. */
+.card-actions {
+  position: absolute;
+  inset-block-end: 2px;
+  inset-inline-end: 2px;
+  display: none;
+  gap: 2px;
+  font-size: 0.8rem;
+}
+.card-actions button { min-block-size: 1.9rem; padding-inline: 0.5rem; background: var(--panel); }
+.card:hover .card-actions, .card:focus-within .card-actions { display: flex; }
+.card:hover, .card:focus-within { z-index: 1000; }
+
+dialog { color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 0.75rem; }
+dialog::backdrop { background: oklch(0 0 none / 0.55); }
+.confirm { padding: 1.5rem; }
+.confirm p { margin-block: 0.5rem 1.25rem; color: var(--muted); }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+.phone { padding: 0.5rem; }
+.phone form { margin-block-end: 0.5rem; }
+.phone iframe { display: block; border: 1px solid var(--line); max-block-size: 82dvh; }
+
+@media (hover: none) {
+  .card-actions { display: flex; position: static; flex-direction: column; font-size: 0.7rem; }
+}
+
+/* Phone: Overload stays pinned on top, the form sits under the thumb, the wall takes the rest. */
+@media (max-width: 700px) {
+  body { block-size: 100dvh; }
+  .board {
+    --edge: 0.6rem;
+    gap: 0.5rem;
+    padding-block: max(var(--edge), env(safe-area-inset-top)) max(var(--edge), env(safe-area-inset-bottom));
+    padding-inline: var(--edge);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "overload" "wall" "add" "utilities";
+  }
+  :root[data-placement="band"] .board {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "overload" "wall" "add" "utilities";
+  }
+  :root[data-placement="band"] .add { grid-template-columns: minmax(0, 1fr); }
+  :root[data-placement="band"] .estimates { grid-template-columns: repeat(6, 1fr); }
+  :root[data-placement="band"] .utilities-body { flex-direction: row; align-items: center; }
+
+  .today, .overload-label, .add-title > span, .estimates legend { display: none; }
+  .overload { container-type: normal; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.75rem; align-items: center; }
+  .overload-value { grid-row: span 2; font-size: 3.4rem; }
+  .meter { margin-block: 0; align-self: end; }
+  .overload-detail { font-size: 0.85rem; line-height: 1.4; align-self: start; }
+  .add { gap: 0.35rem; }
+  .add input[type="text"], .custom input { font-size: 1rem; min-block-size: 2.75rem; }
+  .estimates span { font-size: 0.75rem; }
+  .add .primary { min-block-size: 2.75rem; font-size: 1.05rem; }
+  .utilities summary { display: block; font-size: 0.85rem; color: var(--muted); min-block-size: 1.5rem; cursor: pointer; }
+  .card { padding: 0.4em; gap: 0.3em; }
+}
