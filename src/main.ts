@@ -15,7 +15,6 @@ type State = {
   shiftHours: number;
   muted: boolean;
   volume: number;
-  theme: "auto" | "light" | "dark";
   font: "relief" | "comic" | "clean";
   surface: "cork" | "dots";
   nextId: number;
@@ -27,7 +26,6 @@ const defaults: State = {
   shiftHours: 8,
   muted: false,
   volume: 70,
-  theme: "auto",
   font: "relief",
   surface: "cork",
   nextId: 1,
@@ -126,13 +124,12 @@ function fitTitle(card: HTMLElement, title: HTMLElement, size: number) {
 }
 
 function render() {
-  const { tasks, shiftHours, theme, font, surface } = state;
+  const { tasks, shiftHours, font, surface } = state;
   const total = tasks.reduce((sum, t) => sum + t.minutes, 0);
   const pct = Math.round((total / (shiftHours * 60)) * 100);
   const stage = stageOf(pct);
 
   const root = document.documentElement;
-  root.dataset.theme = theme === "auto" ? (pct >= 100 ? "dark" : "light") : theme;
   root.dataset.font = font;
   root.dataset.surface = surface;
   root.dataset.stage = stage.name.toLowerCase();
@@ -147,7 +144,6 @@ function render() {
   $("empty").hidden = tasks.length > 0;
 
   $<HTMLInputElement>("volume").value = String(state.volume);
-  $<HTMLSelectElement>("lab-theme").value = theme;
   $<HTMLSelectElement>("lab-font").value = font;
   const surfaceLabel = surface === "cork" ? "Switch to dotted paper" : "Switch to corkboard";
   $("surface").setAttribute("aria-label", surfaceLabel);
@@ -432,10 +428,6 @@ lab.addEventListener("click", (event) => {
   commit();
 });
 
-$<HTMLSelectElement>("lab-theme").addEventListener("change", (e) => {
-  state.theme = (e.target as HTMLSelectElement).value as State["theme"];
-  commit();
-});
 $<HTMLSelectElement>("lab-font").addEventListener("change", (e) => {
   state.font = (e.target as HTMLSelectElement).value as State["font"];
   commit();
