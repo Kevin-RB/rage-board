@@ -2,7 +2,19 @@
 // Every strategy returns plain rectangles, so the cards stay real page text
 // and strategies can be swapped live without touching the rendering.
 
-export type Task = { id: number; title: string; minutes: number };
+/** A position as a fraction of the room left on the wall, so it survives resizing. */
+export type Spot = { x: number; y: number };
+
+export type Task = {
+  id: number;
+  title: string;
+  minutes: number;
+  color: string;
+  /** Where the owner dropped it. Wins over any strategy. */
+  pin?: Spot;
+  /** Where it first landed in the pile, kept so it doesn't jump when other Tasks change. */
+  spot?: Spot;
+};
 export type Strategy = "hybrid" | "hours" | "columns" | "shrink" | "scroll" | "pile";
 
 export type Placed = {
@@ -62,7 +74,8 @@ function fit(w: number, h: number, maxFont: number, title = ""): { font: number;
   const longestWord = Math.max(0, ...title.split(/\s+/).map((word) => word.length));
   const byWord = w / (extraW + 0.62 * longestWord);
   const font = Math.max(5, Math.min(best, maxFont, byWord));
-  return { font, lines: Math.max(1, Math.floor((h - extraH * font) / (1.2 * font))) };
+  // The small nudge stops floating point turning an exact 3 lines into 2.
+  return { font, lines: Math.max(1, Math.floor((h - extraH * font) / (1.2 * font) + 0.01)) };
 }
 
 function place(task: Task, x: number, y: number, w: number, h: number, c: Ctx, rot = 0, piled = false): Placed {
@@ -110,12 +123,43 @@ function scroll(tasks: Task[], c: Ctx): Layout {
   return { cards, contentHeight: Math.max(c.h, tasks.length * (h + c.gap)) };
 }
 
+/**
+ * Square notes that land at the emptiest of a few random spots. While there's room they
+ * barely touch, so the Board starts out orderly and overlaps more as it fills up.
+ */
 function pile(tasks: Task[], c: Ctx): Layout {
-  const w = Math.min(c.w * 0.5, 560);
-  const h = Math.min(c.h * 0.22, 170);
+  const size = Math.min(300, Math.max(130, Math.min(c.w, c.h) * 0.26));
+  const roomX = Math.max(0, c.w - size);
+  const roomY = Math.max(0, c.h - size);
+  const taken: { x: number; y: number }[] = [];
+
+  const overlapWithTaken = (x: number, y: number) =>
+    taken.reduce((sum, o) => {
+      const dx = size - Math.abs(o.x - x);
+      const dy = size - Math.abs(o.y - y);
+      return dx > 0 && dy > 0 ? sum + dx * dy : sum;
+    }, 0);
+
   const cards = tasks.map((t) => {
     const r = rng(t.id);
-    return place(t, r() * (c.w - w), r() * (c.h - h), w, h, c, (r() - 0.5) * 10, true);
+    const rot = (r() - 0.5) * 10;
+    let spot = t.pin ?? t.spot;
+    if (!spot) {
+      let best = Infinity;
+      for (let i = 0; i < 30; i++) {
+        const candidate = { x: r(), y: r() };
+        const score = overlapWithTaken(candidate.x * roomX, candidate.y * roomY);
+        if (score < best) {
+          best = score;
+          spot = candidate;
+        }
+      }
+      t.spot = spot;
+    }
+    const x = spot!.x * roomX;
+    const y = spot!.y * roomY;
+    taken.push({ x, y });
+    return place(t, x, y, size, size, c, rot, true);
   });
   return { cards, contentHeight: c.h };
 }
@@ -207,6 +251,18 @@ export function layOut(
     floor: phone ? 13 : 19,
     maxCols: phone ? 2 : 8,
   };
+  const layout = byStrategy(strategy, tasks, shiftMinutes, c);
+  for (const card of layout.cards) {
+    const pin = card.task.pin;
+    if (!pin) continue;
+    card.x = pin.x * Math.max(0, w - card.w);
+    card.y = pin.y * Math.max(0, h - card.h);
+    card.piled = true;
+  }
+  return layout;
+}
+
+function byStrategy(strategy: Strategy, tasks: Task[], shiftMinutes: number, c: Ctx): Layout {
   switch (strategy) {
     case "hybrid": return hybrid(tasks, c);
     case "hours": return hours(tasks, shiftMinutes, c);

@@ -12,12 +12,18 @@
       <strong class="lab-tag">Prototype</strong>
       <label>Crowding
         <select id="lab-strategy">
+          <option value="pile">Overlapping pile</option>
           <option value="hybrid">Columns, then overlap</option>
           <option value="hours">Wall = Shift (sized by hours)</option>
           <option value="columns">More columns only</option>
           <option value="shrink">Shrinking text only</option>
           <option value="scroll">Scrolling only</option>
-          <option value="pile">Overlapping only</option>
+        </select>
+      </label>
+      <label>Note font
+        <select id="lab-font">
+          <option value="comic">Comic Sans</option>
+          <option value="clean">Clean</option>
         </select>
       </label>
       <label>Controls
@@ -28,8 +34,9 @@
       </label>
       <label>Look
         <select id="lab-theme">
-          <option value="light">Clean office (light)</option>
-          <option value="dark">Control room (dark)</option>
+          <option value="auto">Lights go out at 100%</option>
+          <option value="light">Always light</option>
+          <option value="dark">Always dark</option>
         </select>
       </label>
       <label>View from
@@ -55,6 +62,7 @@
         <button type="button" data-add="5">+5</button>
         <button type="button" data-add="20">+20</button>
       </span>
+      <button type="button" id="lab-reset">Reset positions</button>
       <button type="button" id="lab-phone">Phone view</button>
       <button type="button" id="lab-hide" title="Press H to bring it back">Hide (H)</button>
     </form>
@@ -97,6 +105,12 @@
             <span>Hours</span>
             <input id="custom" type="number" min="0.25" step="0.25" value="3" inputmode="decimal" />
           </label>
+          <fieldset class="colors" id="colors">
+            <legend>Colour</legend>
+            <label class="color-random">
+              <input type="radio" name="color" value="random" checked /><span>Random</span>
+            </label>
+          </fieldset>
           <button class="primary" type="submit">Yeah, sure</button>
         </form>
 

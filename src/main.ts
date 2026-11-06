@@ -11,19 +11,21 @@ type State = {
   volume: number;
   strategy: Strategy;
   placement: "rail" | "band";
-  theme: "light" | "dark";
+  theme: "auto" | "light" | "dark";
+  font: "comic" | "clean";
   nextId: number;
 };
 
-const KEY = "rage-board-layout-prototype";
+const KEY = "rage-board-layout-prototype-v2";
 const defaults: State = {
   tasks: [],
   shiftHours: 8,
   muted: false,
   volume: 70,
-  strategy: "hybrid",
+  strategy: "pile",
   placement: "rail",
-  theme: "light",
+  theme: "auto",
+  font: "comic",
   nextId: 1,
 };
 
@@ -66,7 +68,9 @@ const REQUESTS = [
 ];
 const ESTIMATES = [15, 15, 30, 30, 30, 60, 60, 60, 120, 120, 240];
 const pick = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
-const add = (title: string, minutes: number) => state.tasks.push({ id: state.nextId++, title, minutes });
+const COLORS = ["yellow", "pink", "green", "blue", "orange", "purple"];
+const add = (title: string, minutes: number, color = pick(COLORS)) =>
+  state.tasks.push({ id: state.nextId++, title, minutes, color });
 const addFake = (minutes = pick(ESTIMATES)) => add(pick(REQUESTS), minutes);
 
 function fillTo(percent: number) {
@@ -82,14 +86,18 @@ function fillTo(percent: number) {
 
 const wall = $("wall");
 const phoneQuery = matchMedia("(max-width: 700px)");
+let selectedId: number | null = null;
 
 function render() {
-  const { tasks, shiftHours, strategy, placement, theme } = state;
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.dataset.placement = placement;
-
+  const { tasks, shiftHours, strategy, placement, theme, font } = state;
   const total = tasks.reduce((sum, t) => sum + t.minutes, 0);
   const pct = Math.round((total / (shiftHours * 60)) * 100);
+
+  const root = document.documentElement;
+  root.dataset.theme = theme === "auto" ? (pct >= 100 ? "dark" : "light") : theme;
+  root.dataset.placement = placement;
+  root.dataset.font = font;
+
   $("overload-value").textContent = `${pct}%`;
   $("meter-fill").style.inlineSize = `${Math.min(pct, 100)}%`;
   $("stage-name").textContent = stageName(pct);
@@ -106,6 +114,7 @@ function render() {
   syncValue("lab-strategy", strategy);
   syncValue("lab-placement", placement);
   syncValue("lab-theme", theme);
+  syncValue("lab-font", font);
   const mute = $("mute");
   mute.textContent = state.muted ? "Muted" : "Sound on";
   mute.setAttribute("aria-pressed", String(state.muted));
@@ -130,6 +139,9 @@ function render() {
   for (const c of layout.cards) {
     const card = document.createElement("article");
     card.className = `card${c.piled ? " piled" : ""}${isTall(c.w, c.h) ? " tall" : ""}`;
+    card.classList.toggle("selected", c.task.id === selectedId);
+    card.dataset.id = String(c.task.id);
+    card.dataset.note = c.task.color;
     card.style.cssText =
       `inset-inline-start:${c.x}px;inset-block-start:${c.y}px;inline-size:${c.w}px;block-size:${c.h}px;` +
       `font-size:${c.font}px;--lines:${c.lines};rotate:${c.rot}deg`;
@@ -150,9 +162,22 @@ function render() {
       button.dataset.id = String(c.task.id);
       actions.append(button);
     }
+    for (const color of COLORS) {
+      const swatch = document.createElement("button");
+      swatch.type = "button";
+      swatch.className = "swatch";
+      swatch.dataset.note = color;
+      swatch.dataset.recolor = color;
+      swatch.setAttribute("aria-label", `Make it ${color}`);
+      swatch.setAttribute("aria-pressed", String(c.task.color === color));
+      actions.append(swatch);
+    }
     card.append(title, estimate, actions);
     wall.append(card);
   }
+
+  // A new Task's landing spot is worked out during layout, so keep it.
+  save();
 }
 
 const commit = () => {
@@ -167,7 +192,8 @@ $<HTMLFormElement>("add").addEventListener("submit", (event) => {
   const chosen = new FormData(event.target as HTMLFormElement).get("estimate");
   const minutes = chosen === "custom" ? Number($<HTMLInputElement>("custom").value) * 60 : Number(chosen);
   if (!titleInput.value.trim() || !(minutes > 0)) return;
-  add(titleInput.value.trim(), minutes);
+  const color = new FormData(event.target as HTMLFormElement).get("color") as string;
+  add(titleInput.value.trim(), minutes, color === "random" ? undefined : color);
   titleInput.value = "";
   titleInput.focus();
   commit();
@@ -177,11 +203,94 @@ document.querySelector(".estimates")!.addEventListener("change", (event) => {
   $("custom-row").hidden = (event.target as HTMLInputElement).value !== "custom";
 });
 
+for (const color of COLORS) {
+  const label = document.createElement("label");
+  const input = document.createElement("input");
+  input.type = "radio";
+  input.name = "color";
+  input.value = color;
+  input.setAttribute("aria-label", color);
+  const swatch = document.createElement("span");
+  swatch.className = "swatch";
+  swatch.dataset.note = color;
+  label.append(input, swatch);
+  $("colors").append(label);
+}
+
 wall.addEventListener("click", (event) => {
-  const button = (event.target as HTMLElement).closest<HTMLElement>("[data-action]");
-  if (!button) return;
-  state.tasks = state.tasks.filter((t) => t.id !== Number(button.dataset.id));
-  commit();
+  const target = event.target as HTMLElement;
+  const button = target.closest<HTMLElement>("[data-action]");
+  if (button) {
+    state.tasks = state.tasks.filter((t) => t.id !== Number(button.dataset.id));
+    selectedId = null;
+    commit();
+    return;
+  }
+  const swatch = target.closest<HTMLElement>("[data-recolor]");
+  if (swatch) {
+    const id = Number(swatch.closest<HTMLElement>(".card")!.dataset.id);
+    state.tasks.find((t) => t.id === id)!.color = swatch.dataset.recolor!;
+    commit();
+    return;
+  }
+  // A click on bare wall lets go of the selected note. Clicks on notes are handled on pointerup.
+  if (!target.closest(".card") && selectedId !== null) {
+    selectedId = null;
+    render();
+  }
+});
+
+// Drag a note anywhere on the wall. A press without movement selects it instead.
+wall.addEventListener("pointerdown", (event) => {
+  const target = event.target as HTMLElement;
+  const el = target.closest<HTMLElement>(".card");
+  if (!el || target.closest("button") || state.strategy === "scroll") return;
+
+  // "View from" shrinks the Board, so pointer movement has to be scaled back up to match.
+  const scale = Number(getComputedStyle(document.documentElement).getPropertyValue("--view-scale")) || 1;
+  const task = state.tasks.find((t) => t.id === Number(el.dataset.id))!;
+  const roomX = Math.max(0, wall.clientWidth - el.offsetWidth);
+  const roomY = Math.max(0, wall.clientHeight - el.offsetHeight);
+  const startX = el.offsetLeft;
+  const startY = el.offsetTop;
+  let x = startX;
+  let y = startY;
+  let moved = false;
+
+  el.setPointerCapture(event.pointerId);
+
+  const onMove = (move: PointerEvent) => {
+    const dx = (move.clientX - event.clientX) / scale;
+    const dy = (move.clientY - event.clientY) / scale;
+    if (!moved && Math.hypot(dx, dy) < 4) return;
+    moved = true;
+    el.classList.add("dragging");
+    x = Math.min(roomX, Math.max(0, startX + dx));
+    y = Math.min(roomY, Math.max(0, startY + dy));
+    el.style.insetInlineStart = `${x}px`;
+    el.style.insetBlockStart = `${y}px`;
+  };
+
+  const finish = (end: PointerEvent) => {
+    el.removeEventListener("pointermove", onMove);
+    el.removeEventListener("pointerup", finish);
+    el.removeEventListener("pointercancel", finish);
+    if (end.type === "pointercancel") {
+      render();
+      return;
+    }
+    if (moved) task.pin = { x: roomX ? x / roomX : 0, y: roomY ? y / roomY : 0 };
+    else selectedId = selectedId === task.id ? null : task.id;
+    // Whatever you touch comes to the top of the pile. Later in the list draws on top.
+    if (state.strategy === "pile") {
+      state.tasks = [...state.tasks.filter((t) => t !== task), task];
+    }
+    commit();
+  };
+
+  el.addEventListener("pointermove", onMove);
+  el.addEventListener("pointerup", finish);
+  el.addEventListener("pointercancel", finish);
 });
 
 $<HTMLInputElement>("shift").addEventListener("input", (event) => {
@@ -242,6 +351,17 @@ $<HTMLSelectElement>("lab-placement").addEventListener("change", (e) => {
 });
 $<HTMLSelectElement>("lab-theme").addEventListener("change", (e) => {
   state.theme = (e.target as HTMLSelectElement).value as State["theme"];
+  commit();
+});
+$<HTMLSelectElement>("lab-font").addEventListener("change", (e) => {
+  state.font = (e.target as HTMLSelectElement).value as State["font"];
+  commit();
+});
+$("lab-reset").addEventListener("click", () => {
+  for (const task of state.tasks) {
+    delete task.pin;
+    delete task.spot;
+  }
   commit();
 });
 // Assumes about 70 cm from the screen at your desk: at twice the distance, things look half the size.
