@@ -1,6 +1,7 @@
-// Rough layout prototype: no effects, no sound. Throwaway, never merged.
+// Rough layout prototype: no effects, interaction sounds only. Throwaway, never merged.
 import "@fontsource/comic-relief/latin-400.css";
 import "@fontsource/comic-relief/latin-700.css";
+import { play, setEnabled, setTheme, setVolume, sounds, themes, unlock } from "cuelume";
 import {
   Angry, Briefcase, Check, Clock, Coffee, createElement, createIcons, Flame, Frown, Grip, Hourglass, Meh,
   Minus, Plus, Shuffle, Smile, StickyNote, Sunrise, Trash2, Volume2, VolumeX, X, type IconNode,
@@ -34,6 +35,9 @@ const defaults: State = {
 const load = (): State => ({ ...defaults, ...JSON.parse(localStorage.getItem(KEY) ?? "{}") });
 let state = load();
 const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+
+setEnabled(!state.muted);
+setVolume(state.volume / 100);
 
 const STAGES: { name: string; icon: IconNode }[] = [
   { name: "Calm", icon: Smile },
@@ -203,6 +207,7 @@ $<HTMLFormElement>("add").addEventListener("submit", (event) => {
   const custom = estimateSelect.value === "custom";
   const minutes = custom ? Number($<HTMLInputElement>("custom").value) * 60 : Number(estimateSelect.value);
   if (!titleInput.value.trim() || !(minutes > 0)) return;
+  // Adding a Task stays silent: the owner's hit marker will sound here later.
   add(titleInput.value.trim(), minutes, chosenColor === "random" ? undefined : chosenColor);
   titleInput.value = "";
   titleInput.focus();
@@ -210,6 +215,7 @@ $<HTMLFormElement>("add").addEventListener("submit", (event) => {
 });
 
 estimateSelect.addEventListener("change", () => {
+  play("select");
   $("custom-row").hidden = estimateSelect.value !== "custom";
 });
 
@@ -240,6 +246,7 @@ $("color-menu").addEventListener("click", (event) => {
   const choice = (event.target as HTMLElement).closest<HTMLElement>("[data-pick]");
   if (!choice) return;
   chosenColor = choice.dataset.pick!;
+  play("select");
   showChosenColor();
   $("color-menu").hidePopover();
 });
@@ -259,6 +266,7 @@ function openEditor(task: Task) {
   editorHours.value = String(task.minutes / 60);
   markEditorColor(task.color);
   editor.showModal();
+  play("open", { emphasis: "subtle" });
   editorTitle.focus();
 }
 
@@ -291,20 +299,26 @@ $("editor-swatches").addEventListener("click", (event) => {
   const task = editing();
   if (!swatch || !task) return;
   task.color = swatch.dataset.recolor!;
+  play("select");
   editor.dataset.note = task.color;
   markEditorColor(task.color);
   commit();
 });
 
-const removeEditing = () => {
+let removalSounded = false;
+const removeEditing = (sound: "success" | "close") => {
+  play(sound, sound === "close" ? { emphasis: "strong" } : undefined);
+  removalSounded = true;
   state.tasks = state.tasks.filter((t) => t.id !== editingId);
   editor.close();
   commit();
 };
-$("editor-done").addEventListener("click", removeEditing);
-$("editor-remove").addEventListener("click", removeEditing);
+$("editor-done").addEventListener("click", () => removeEditing("success"));
+$("editor-remove").addEventListener("click", () => removeEditing("close"));
 editor.addEventListener("close", () => {
   editingId = null;
+  if (removalSounded) removalSounded = false;
+  else play("close", { emphasis: "subtle" });
 });
 // Clicking the dim area around the note closes it.
 editor.addEventListener("click", (event) => {
@@ -320,6 +334,7 @@ editor.addEventListener("click", (event) => {
 wall.addEventListener("click", (event) => {
   const done = (event.target as HTMLElement).closest<HTMLElement>("[data-done]");
   if (!done) return;
+  play("success");
   state.tasks = state.tasks.filter((t) => t.id !== Number(done.dataset.done));
   commit();
 });
@@ -347,6 +362,7 @@ wall.addEventListener("pointerdown", (event) => {
     const dx = (move.clientX - event.clientX) / scale;
     const dy = (move.clientY - event.clientY) / scale;
     if (!moved && Math.hypot(dx, dy) < 4) return;
+    if (!moved) play("select");
     moved = true;
     el.classList.add("dragging");
     x = Math.min(roomX, Math.max(0, startX + dx));
@@ -367,7 +383,8 @@ wall.addEventListener("pointerdown", (event) => {
     // Whatever you touch comes to the top of the pile. Later in the list draws on top.
     state.tasks = [...state.tasks.filter((t) => t !== task), task];
     commit();
-    if (!moved) openEditor(task);
+    if (moved) play("tap");
+    else openEditor(task);
   };
 
   el.addEventListener("pointermove", onMove);
@@ -384,10 +401,13 @@ $("shift-down").addEventListener("click", () => changeShift(-0.5));
 $("shift-up").addEventListener("click", () => changeShift(0.5));
 $("mute").addEventListener("click", () => {
   state.muted = !state.muted;
+  if (!state.muted) void unlock();
+  setEnabled(!state.muted);
   commit();
 });
 $<HTMLInputElement>("volume").addEventListener("input", (event) => {
   state.volume = Number((event.target as HTMLInputElement).value);
+  setVolume(state.volume / 100);
   commit();
 });
 
@@ -454,6 +474,16 @@ $("lab-hide").addEventListener("click", toggleLab);
 addEventListener("keydown", (event) => {
   const typing = (event.target as HTMLElement).matches("input, select, textarea");
   if (event.key.toLowerCase() === "h" && !typing) toggleLab();
+});
+
+// Temporary audition: S plays the next cue, Shift+S switches theme (4 themes x 14 cues).
+let audition = 0;
+addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() !== "s" || (event.target as HTMLElement).matches("input, select, textarea")) return;
+  if (event.shiftKey) {
+    setTheme(themes[audition++ % themes.length]);
+    play("select", { emphasis: "strong" });
+  } else play(sounds[audition++ % sounds.length], { emphasis: "strong" });
 });
 
 // Keep the desktop and the phone view in step, and redraw when the wall changes size.
